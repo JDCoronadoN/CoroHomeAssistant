@@ -8,52 +8,27 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.remember
 import androidx.fragment.app.FragmentActivity
+import androidx.navigation.compose.rememberNavController
 import com.example.login_app.data.biometric.BiometricHelper
 import com.example.login_app.data.local.PreferencesManager
+import com.example.login_app.presentation.navigation.AppNavigation
 import com.example.login_app.presentation.ui.LoginScreen
 import com.example.login_app.presentation.viewmodel.LoginViewModel
+import com.example.login_app.ui.theme.Login_APPTheme
 
 class MainActivity : FragmentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val prefs = PreferencesManager(applicationContext)
-        val viewModel = LoginViewModel(prefs)
-        val biometricHelper = BiometricHelper(this)
-
         setContent {
-            MaterialTheme {
-                Surface {
-                    LoginScreen(
-                        viewModel = viewModel,
-                        onTriggerBiometric = {
-                            if (biometricHelper.isBiometricAvailable()) {
-                                biometricHelper.promptBiometricAuth(
-                                    onSuccess = {
-                                        // Cargar credenciales almacenadas localmente en cifrado y autenticar
-                                        val savedPass = prefs.getSavedPassword()
-                                        if (savedPass != null) {
-                                            viewModel.passwordState = savedPass
-                                            viewModel.authenticateWithApi {
-                                                Toast.makeText(this, "Autenticación biométrica correcta", Toast.LENGTH_SHORT).show()
-                                            }
-                                        }
-                                    },
-                                    onError = { err ->
-                                        viewModel.statusMessage = err
-                                    }
-                                )
-                            } else {
-                                viewModel.statusMessage = "Biometría o PIN de bloqueo no configurado en el teléfono."
-                            }
-                        },
-                        onLoginSuccess = {
-                            // Flujo a ejecutar tras login exitoso (ej. transición a registro de rostros o panel)
-                            Toast.makeText(this, "Acceso concedido a la API", Toast.LENGTH_SHORT).show()
-                        }
-                    )
-                }
+            Login_APPTheme {
+                val navController = rememberNavController()
+
+                // Pasamos 'this@MainActivity' que es un FragmentActivity válido
+                AppNavigation(
+                    navController = navController,
+                    activity = this@MainActivity
+                )
             }
         }
     }
