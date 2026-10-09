@@ -72,6 +72,12 @@ dependencies {
     implementation("com.google.mlkit:face-detection:16.1.7")
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
 
+    //reproductor de multimeda
+    implementation("androidx.media3:media3-exoplayer:1.8.0")
+    implementation("androidx.media3:media3-common:1.8.0")
+
+    //FireStore
+    implementation(platform("com.google.firebase:firebase-bom:33.4.0"))
 
 
     //Test

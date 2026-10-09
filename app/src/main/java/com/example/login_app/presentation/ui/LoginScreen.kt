@@ -12,7 +12,6 @@ import com.example.login_app.presentation.viewmodel.LoginViewModel
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel,
-    onTriggerBiometric: () -> Unit,
     onLoginSuccess: () -> Unit
 ) {
     Column(
@@ -50,26 +49,8 @@ fun LoginScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Checkbox: Recordar credenciales y habilitar Biometría
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Checkbox(
-                checked = viewModel.rememberState,
-                onCheckedChange = { viewModel.rememberState = it }
-            )
-            Text(
-                text = "Recordar credenciales y usar Huella/PIN",
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
-
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Botón Iniciar Sesión por Red
         Button(
             onClick = { viewModel.authenticateWithApi(onSuccess = onLoginSuccess) },
             enabled = !viewModel.isLoading,
@@ -85,18 +66,6 @@ fun LoginScreen(
             }
         }
 
-        // Botón Biométrico opcional (sólo si se han guardado credenciales anteriormente)
-        if (viewModel.rememberState) {
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedButton(
-                onClick = onTriggerBiometric,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Ingresar con Huella / PIN")
-            }
-        }
-
-        // Mensajes de estado / error devueltos por Retrofit
         viewModel.statusMessage?.let { msg ->
             Spacer(modifier = Modifier.height(16.dp))
             Text(

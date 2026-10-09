@@ -26,11 +26,16 @@ class PreferencesManager(context: Context) {
             .apply()
     }
 
-    fun clearCredentials() {
-        sharedPreferences.edit().clear().apply()
+    fun setAutoLoginEnabled(enabled: Boolean){
+        sharedPreferences.edit()
+            .putBoolean("KEY_AUTO_LOGIN", enabled)
+            .apply()
     }
-
-    fun isRememberEnabled(): Boolean = sharedPreferences.getBoolean("KEY_REMEMBER", false)
+    fun isAutoLoginEnabled(): Boolean = sharedPreferences.getBoolean("KEY_AUTO_LOGIN", false)
+    fun isRememberEnabled(): Boolean = sharedPreferences.getBoolean("KEY_REMEMBER",false)
     fun getSavedUsername(): String? = sharedPreferences.getString("KEY_USERNAME", null)
     fun getSavedPassword(): String? = sharedPreferences.getString("KEY_PASSWORD", null)
+    fun clearCredentials(){
+        sharedPreferences.edit().clear().apply()
+    }
 }

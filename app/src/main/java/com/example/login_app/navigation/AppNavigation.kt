@@ -13,46 +13,28 @@ import com.example.login_app.data.local.PreferencesManager
 import com.example.login_app.presentation.ui.HomeScreen
 import com.example.login_app.presentation.ui.LoginScreen
 import com.example.login_app.presentation.viewmodel.LoginViewModel
-import com.example.login_app.presentation.viewmodel.LoginViewModelFactory
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Home : Screen("home")
     object FaceRegister : Screen("face_register")
+    object LogsAccess : Screen("logs_access")
 }
 
 @Composable
 fun AppNavigation(
     navController: NavHostController,
-    activity: FragmentActivity
+    activity: FragmentActivity,
+    viewModel: LoginViewModel,
+    prefsManager: PreferencesManager
 ) {
-    val context = LocalContext.current
-    val biometricHelper = remember(activity) { BiometricHelper(activity) }
-
-    // Instancia de PreferencesManager y Factory
-    val prefsManager = remember { PreferencesManager(context) }
-    val factory = remember { LoginViewModelFactory(prefsManager) }
-
     NavHost(
         navController = navController,
         startDestination = Screen.Login.route
     ) {
-        composable(Screen.Login.route) { backStackEntry ->
-            // Creamos o recuperamos el ViewModel en el alcance de este destino o del NavHost
-            val loginViewModel: LoginViewModel = viewModel(factory = factory)
-
+        composable(Screen.Login.route) {
             LoginScreen(
-                viewModel = loginViewModel,
-                onTriggerBiometric = {
-                    biometricHelper.promptBiometricAuth(
-                        onSuccess = {
-                            navController.navigate(Screen.Home.route) {
-                                popUpTo(Screen.Login.route) { inclusive = true }
-                            }
-                        },
-                        onError = { errorMessage -> }
-                    )
-                },
+                viewModel = viewModel,
                 onLoginSuccess = {
                     navController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
@@ -60,20 +42,24 @@ fun AppNavigation(
                 }
             )
         }
-
         composable(Screen.Home.route) {
-            // Leemos el usuario ingresado desde PreferencesManager (o el estado guardado)
             val currentUsername = remember {
                 prefsManager.getSavedUsername() ?: "Usuario"
             }
 
             HomeScreen(
                 username = currentUsername,
+                prefsManager = prefsManager,
                 onRegisterFaceClick = {
                     navController.navigate(Screen.FaceRegister.route)
                 },
+                onViewLogsClick = {
+                    navController.navigate(Screen.LogsAccess.route)
+                },
                 onLogoutClick = {
-                    prefsManager.clearCredentials() // Opcional: Limpiar al cerrar sesión
+                    prefsManager.clearCredentials()
+                    prefsManager.setAutoLoginEnabled(false)
+                    viewModel.clearFields()
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.Home.route) { inclusive = true }
                     }
@@ -81,8 +67,14 @@ fun AppNavigation(
             )
         }
 
+        // Pantalla de Registro Facial (Estructural)
         composable(Screen.FaceRegister.route) {
-            // Pantalla de registro facial
+            // Próxima implementación
+        }
+
+        // Pantalla de Logs de Acceso (Estructural)
+        composable(Screen.LogsAccess.route) {
+            // Próxima implementación
         }
     }
 }

@@ -13,20 +13,21 @@ class LoginViewModel(private val prefs: PreferencesManager) : ViewModel() {
 
     var usernameState by mutableStateOf("")
     var passwordState by mutableStateOf("")
-    var rememberState by mutableStateOf(false)
 
     var isLoading by mutableStateOf(false)
     var statusMessage by mutableStateOf<String?>(null)
     var isAuthSuccessful by mutableStateOf(false)
 
     init {
-        // Cargar estado inicial si existen credenciales guardadas
-        if (prefs.isRememberEnabled()) {
-            rememberState = true
-            usernameState = prefs.getSavedUsername() ?: ""
-        }
+        usernameState = prefs.getSavedUsername() ?: ""
     }
-
+    fun clearFields() {
+        usernameState = ""
+        passwordState = ""
+        statusMessage = null
+        isAuthSuccessful = false
+        isLoading = false
+    }
     fun authenticateWithApi(onSuccess: () -> Unit) {
         if (usernameState.isBlank() || passwordState.isBlank()) {
             statusMessage = "Por favor, complete usuario y contraseña."
@@ -37,7 +38,6 @@ class LoginViewModel(private val prefs: PreferencesManager) : ViewModel() {
             isLoading = true
             statusMessage = null
             try {
-                // Consulta directa a PostgREST en Docker filtrando por usuario
                 val response = RetrofitClient.rostroApiService.obtenerUsuario(
                     username = "eq.$usernameState"
                 )
@@ -46,16 +46,12 @@ class LoginViewModel(private val prefs: PreferencesManager) : ViewModel() {
                     val user = response.body()!!.first()
 
                     if (user.passwordHash == passwordState) {
-                        if (rememberState) {
                             prefs.saveCredentials(usernameState, passwordState)
-                        } else {
-                            prefs.clearCredentials()
-                        }
-                        isAuthSuccessful = true
-                        statusMessage = "Conexión exitosa. Bienvenido."
-                        onSuccess()
+                            isAuthSuccessful = true
+                            statusMessage = "Conexion Exitosa, Bienvenido"
+                            onSuccess()
                     } else {
-                        statusMessage = "Contraseña incorrecta."
+                        statusMessage = "Contrasena incorrecta."
                     }
                 } else {
                     statusMessage = "Usuario no encontrado."
@@ -64,6 +60,38 @@ class LoginViewModel(private val prefs: PreferencesManager) : ViewModel() {
                 statusMessage = "Error de red/API: ${e.localizedMessage}"
             } finally {
                 isLoading = false
+            }
+        }
+    }
+    fun authenticateAuto(onSuccess: () -> Unit, onError: (String) -> Unit){
+        val savedUser = prefs.getSavedUsername()
+        val savedPass = prefs.getSavedPassword()
+
+        if(savedUser.isNullOrEmpty() || savedPass.isNullOrEmpty()){
+            onError("No hay credenciales guardadas")
+            return
+        }
+        viewModelScope.launch {
+            isLoading = true
+            try {
+                val response = RetrofitClient.rostroApiService.obtenerUsuario(username = "eq.$savedUser")
+                if(response.isSuccessful && !response.body().isNullOrEmpty()){
+                    val user = response.body()!!.first()
+                    if(user.passwordHash == savedPass){
+                        onSuccess()
+                    }
+                    else{
+                        onError("Las credenciales guardadas ya no son validas")
+                    }
+                }
+                else{
+                    onError("Error de conexion al validar usuario")
+                }
+            }
+            catch (e: Exception){
+                onError("Error de red: ${e.localizedMessage}")
+            } finally {
+                isLoading = true
             }
         }
     }

@@ -3,35 +3,46 @@ package com.example.login_app.presentation.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.login_app.data.local.PreferencesManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     username: String = "Usuario",
+    prefsManager: PreferencesManager,
     onRegisterFaceClick: () -> Unit,
+    onViewLogsClick: () -> Unit = {},
     onLogoutClick: () -> Unit
 ) {
+    var isAutoLoginChecked by remember { mutableStateOf(prefsManager.isAutoLoginEnabled()) }
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Inicio") }
             )
         }
-    ) { paddingValues ->
+    )
+    { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Top
         ) {
+            Spacer(modifier = Modifier.height(16.dp))
+
             Text(
                 text = "¡Bienvenido, $username!",
                 fontSize = 24.sp,
@@ -39,7 +50,7 @@ fun HomeScreen(
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = "Sesión iniciada correctamente.",
@@ -48,9 +59,47 @@ fun HomeScreen(
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
-            // Botón para iniciar el flujo de reconocimiento/registro facial
+            // Tarjeta con el Switch funcional de Iniciar Sesión Automático
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Iniciar sesión automático",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "Solicita Huella/PIN al abrir la app",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = isAutoLoginChecked,
+                        onCheckedChange = { checked ->
+                            isAutoLoginChecked = checked
+                            prefsManager.setAutoLoginEnabled(checked)
+                        }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Botón para Reconocimiento / Registro Facial (Estructural)
             Button(
                 onClick = onRegisterFaceClick,
                 modifier = Modifier
@@ -58,20 +107,42 @@ fun HomeScreen(
                     .height(50.dp)
             ) {
                 Text(
-                    text = "Registrar Vectores del Rostro",
-                    fontSize = 16.sp
+                    text = "Validar / Registrar Reconocimiento Facial",
+                    fontSize = 15.sp
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
+            // Botón para Ver Logs de Acceso (Estructural)
             OutlinedButton(
-                onClick = onLogoutClick,
+                onClick = onViewLogsClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp)
             ) {
-                Text(text = "Cerrar Sesión")
+                Text(
+                    text = "Ver Logs de Acceso",
+                    fontSize = 15.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Botón para Cerrar Sesión
+            OutlinedButton(
+                onClick = onLogoutClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                Text(
+                    text = "Cerrar Sesión",
+                    fontSize = 16.sp
+                )
             }
         }
     }
