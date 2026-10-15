@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.login_app.data.api.LoginRequest
 import com.example.login_app.data.api.RetrofitClient
 import com.example.login_app.data.local.PreferencesManager
 import kotlinx.coroutines.launch
@@ -30,7 +31,7 @@ class LoginViewModel(private val prefs: PreferencesManager) : ViewModel() {
     }
     fun authenticateWithApi(onSuccess: () -> Unit) {
         if (usernameState.isBlank() || passwordState.isBlank()) {
-            statusMessage = "Por favor, complete usuario y contraseña."
+            statusMessage = "Por favor, complete correo y contraseña."
             return
         }
 
@@ -38,23 +39,18 @@ class LoginViewModel(private val prefs: PreferencesManager) : ViewModel() {
             isLoading = true
             statusMessage = null
             try {
-                val response = RetrofitClient.rostroApiService.obtenerUsuario(
-                    username = "eq.$usernameState"
+                val response = RetrofitClient.rostroApiService.login(
+                    LoginRequest(correo = usernameState, password = passwordState)
                 )
 
-                if (response.isSuccessful && !response.body().isNullOrEmpty()) {
-                    val user = response.body()!!.first()
-
-                    if (user.passwordHash == passwordState) {
-                            prefs.saveCredentials(usernameState, passwordState)
-                            isAuthSuccessful = true
-                            statusMessage = "Conexion Exitosa, Bienvenido"
-                            onSuccess()
-                    } else {
-                        statusMessage = "Contrasena incorrecta."
-                    }
+                if (response.isSuccessful && response.body() != null) {
+                    val token = response.body()!!.access_token
+                    prefs.saveCredentials(usernameState, passwordState) // O guardar el token JWT
+                    isAuthSuccessful = true
+                    statusMessage = "¡Conexión Exitosa, Bienvenido!"
+                    onSuccess()
                 } else {
-                    statusMessage = "Usuario no encontrado."
+                    statusMessage = "Credenciales incorrectas o usuario no encontrado."
                 }
             } catch (e: Exception) {
                 statusMessage = "Error de red/API: ${e.localizedMessage}"
@@ -63,35 +59,33 @@ class LoginViewModel(private val prefs: PreferencesManager) : ViewModel() {
             }
         }
     }
-    fun authenticateAuto(onSuccess: () -> Unit, onError: (String) -> Unit){
+    fun authenticateAuto(onSuccess: () -> Unit, onError: (String) -> Unit) {
         val savedUser = prefs.getSavedUsername()
         val savedPass = prefs.getSavedPassword()
 
-        if(savedUser.isNullOrEmpty() || savedPass.isNullOrEmpty()){
+        if (savedUser.isNullOrEmpty() || savedPass.isNullOrEmpty()) {
             onError("No hay credenciales guardadas")
             return
         }
+
         viewModelScope.launch {
             isLoading = true
             try {
-                val response = RetrofitClient.rostroApiService.obtenerUsuario(username = "eq.$savedUser")
-                if(response.isSuccessful && !response.body().isNullOrEmpty()){
-                    val user = response.body()!!.first()
-                    if(user.passwordHash == savedPass){
-                        onSuccess()
-                    }
-                    else{
-                        onError("Las credenciales guardadas ya no son validas")
-                    }
+                // Ahora validamos llamando al endpoint /login de FastAPI
+                val response = RetrofitClient.rostroApiService.login(
+                    LoginRequest(correo = savedUser, password = savedPass)
+                )
+
+                if (response.isSuccessful && response.body() != null) {
+                    // Si el servidor valida el usuario y contraseña, el login automático es exitoso
+                    onSuccess()
+                } else {
+                    onError("Las credenciales guardadas ya no son válidas")
                 }
-                else{
-                    onError("Error de conexion al validar usuario")
-                }
-            }
-            catch (e: Exception){
+            } catch (e: Exception) {
                 onError("Error de red: ${e.localizedMessage}")
             } finally {
-                isLoading = true
+                isLoading = false // Corregido: se detiene el indicador de carga
             }
         }
     }

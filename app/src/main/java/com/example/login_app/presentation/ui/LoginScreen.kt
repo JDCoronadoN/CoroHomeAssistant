@@ -12,7 +12,8 @@ import com.example.login_app.presentation.viewmodel.LoginViewModel
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel,
-    onLoginSuccess: () -> Unit
+    onLoginSuccess: () -> Unit,
+    onRegisterClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -64,6 +65,19 @@ fun LoginScreen(
             } else {
                 Text("Iniciar Sesión")
             }
+        }
+
+        viewModel.statusMessage?.let { msg ->
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = msg,
+                color = if (viewModel.isAuthSuccessful) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        TextButton(onClick = onRegisterClick) {
+            Text("¿No tienes cuenta? Regístrate aquí")
         }
 
         viewModel.statusMessage?.let { msg ->
