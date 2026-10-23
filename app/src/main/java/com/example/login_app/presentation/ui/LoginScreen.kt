@@ -5,6 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.login_app.presentation.viewmodel.LoginViewModel
@@ -12,9 +13,10 @@ import com.example.login_app.presentation.viewmodel.LoginViewModel
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel,
-    onTriggerBiometric: () -> Unit,
-    onLoginSuccess: () -> Unit
+    onLoginSuccess: () -> Unit,
+    onRegisterClick: () -> Unit
 ) {
+    val context = LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -22,25 +24,20 @@ fun LoginScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            text = "Acceso al Sistema",
-            style = MaterialTheme.typography.headlineMedium
-        )
+        Text(text = "Acceso al Sistema", style = MaterialTheme.typography.headlineMedium)
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Campo Usuario
         OutlinedTextField(
             value = viewModel.usernameState,
             onValueChange = { viewModel.usernameState = it },
-            label = { Text("Usuario") },
+            label = { Text("Usuario / Correo") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Campo Contraseña
         OutlinedTextField(
             value = viewModel.passwordState,
             onValueChange = { viewModel.passwordState = it },
@@ -50,28 +47,18 @@ fun LoginScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Checkbox: Recordar credenciales y habilitar Biometría
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Checkbox(
-                checked = viewModel.rememberState,
-                onCheckedChange = { viewModel.rememberState = it }
-            )
-            Text(
-                text = "Recordar credenciales y usar Huella/PIN",
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
-
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Botón Iniciar Sesión por Red
         Button(
-            onClick = { viewModel.authenticateWithApi(onSuccess = onLoginSuccess) },
+            onClick = { viewModel.authenticateWithApi(
+                onSuccess = {
+                    NotificationHelper.mostrarNotificacionBienvenida(
+                        context = context,
+                        nombreUsuario = viewModel.usernameState
+                    )
+                    onLoginSuccess()
+                })
+            },
             enabled = !viewModel.isLoading,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -85,18 +72,6 @@ fun LoginScreen(
             }
         }
 
-        // Botón Biométrico opcional (sólo si se han guardado credenciales anteriormente)
-        if (viewModel.rememberState) {
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedButton(
-                onClick = onTriggerBiometric,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Ingresar con Huella / PIN")
-            }
-        }
-
-        // Mensajes de estado / error devueltos por Retrofit
         viewModel.statusMessage?.let { msg ->
             Spacer(modifier = Modifier.height(16.dp))
             Text(
@@ -104,6 +79,11 @@ fun LoginScreen(
                 color = if (viewModel.isAuthSuccessful) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium
             )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+        TextButton(onClick = onRegisterClick) {
+            Text("¿No tienes cuenta? Regístrate aquí")
         }
     }
 }

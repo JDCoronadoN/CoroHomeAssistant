@@ -44,6 +44,9 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation("androidx.navigation:navigation-compose:2.8.3")
+    implementation("androidx.core:core-splashscreen:1.0.1")
+
     // ViewModel y Lifecycle
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.6")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
@@ -67,8 +70,25 @@ dependencies {
     implementation("androidx.camera:camera-view:${cameraxVersion}")
 
     // ML Kit y Permisos
-    implementation("com.google.mlkit:face-detection:16.1.7")
+    implementation("com.google.mlkit:face-detection:16.1.7"){
+        exclude(group = "com.google.ai.edge.litert", module = "litert-api")
+    }
+    implementation("org.tensorflow:tensorflow-lite:2.17.0")
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
+
+    //reproductor de multimeda
+    implementation("androidx.media3:media3-exoplayer:1.8.0")
+    implementation("androidx.media3:media3-common:1.8.0")
+
+    // ✅ AÑADIR
+    implementation("com.google.ai.edge.litert:litert:1.4.2")
+    implementation("com.google.ai.edge.litert:litert-support:1.4.2")
+
+    //FireStore
+    implementation(platform("com.google.firebase:firebase-bom:33.4.0"))
+
+
+    //Test
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
