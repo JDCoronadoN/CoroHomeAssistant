@@ -35,7 +35,23 @@ class PreferencesManager(context: Context) {
     fun isRememberEnabled(): Boolean = sharedPreferences.getBoolean("KEY_REMEMBER",false)
     fun getSavedUsername(): String? = sharedPreferences.getString("KEY_USERNAME", null)
     fun getSavedPassword(): String? = sharedPreferences.getString("KEY_PASSWORD", null)
+    fun saveToken(token: String) {
+        sharedPreferences.edit()
+            .putString("KEY_TOKEN", token)
+            .apply()
+    }
+
+    fun getSavedToken(): String? {
+        return sharedPreferences.getString("KEY_TOKEN", null)
+    }
     fun clearCredentials(){
         sharedPreferences.edit().clear().apply()
+    }
+    fun saveUserId(userId: String) {
+        sharedPreferences.edit().putString("KEY_USER_ID", userId).apply()
+    }
+
+    fun getSavedUserId(): String? {
+        return sharedPreferences.getString("KEY_USER_ID", null)
     }
 }

@@ -2,11 +2,7 @@ package com.example.login_app.presentation.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -20,19 +16,19 @@ import com.example.login_app.data.local.PreferencesManager
 fun HomeScreen(
     username: String = "Usuario",
     prefsManager: PreferencesManager,
-    onRegisterFaceClick: () -> Unit,
+    onVerifyFaceClick: () -> Unit,
     onViewLogsClick: () -> Unit = {},
     onLogoutClick: () -> Unit
 ) {
     var isAutoLoginChecked by remember { mutableStateOf(prefsManager.isAutoLoginEnabled()) }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Inicio") }
             )
         }
-    )
-    { paddingValues ->
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -61,7 +57,7 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Tarjeta con el Switch funcional de Iniciar Sesión Automático
+            // Tarjeta de Iniciar Sesión Automático
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -99,22 +95,15 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Botón para Reconocimiento / Registro Facial (Estructural)
             Button(
-                onClick = onRegisterFaceClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
+                onClick = onVerifyFaceClick,          // ← callback
+                modifier = Modifier.fillMaxWidth().height(50.dp)
             ) {
-                Text(
-                    text = "Validar / Registrar Reconocimiento Facial",
-                    fontSize = 15.sp
-                )
+                Text("Verificar Identidad", fontSize = 15.sp)
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Botón para Ver Logs de Acceso (Estructural)
             OutlinedButton(
                 onClick = onViewLogsClick,
                 modifier = Modifier
@@ -122,14 +111,13 @@ fun HomeScreen(
                     .height(50.dp)
             ) {
                 Text(
-                    text = "Ver Logs de Acceso",
+                    text = "Ver Historial de Accesos",
                     fontSize = 15.sp
                 )
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Botón para Cerrar Sesión
             OutlinedButton(
                 onClick = onLogoutClick,
                 modifier = Modifier

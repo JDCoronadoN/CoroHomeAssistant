@@ -5,12 +5,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.login_app.data.api.LoginRequest
-import com.example.login_app.data.api.RetrofitClient
 import com.example.login_app.data.local.PreferencesManager
+import com.example.login_app.domain.usecase.LoginUseCase
+import com.example.login_app.domain.utils.extractUserIdFromToken
 import kotlinx.coroutines.launch
 
-class LoginViewModel(private val prefs: PreferencesManager) : ViewModel() {
+class LoginViewModel(
+    private val prefs: PreferencesManager,
+    private val loginUseCase: LoginUseCase = LoginUseCase()
+) : ViewModel() {
 
     var usernameState by mutableStateOf("")
     var passwordState by mutableStateOf("")
@@ -22,6 +25,7 @@ class LoginViewModel(private val prefs: PreferencesManager) : ViewModel() {
     init {
         usernameState = prefs.getSavedUsername() ?: ""
     }
+
     fun clearFields() {
         usernameState = ""
         passwordState = ""
@@ -29,6 +33,7 @@ class LoginViewModel(private val prefs: PreferencesManager) : ViewModel() {
         isAuthSuccessful = false
         isLoading = false
     }
+
     fun authenticateWithApi(onSuccess: () -> Unit) {
         if (usernameState.isBlank() || passwordState.isBlank()) {
             statusMessage = "Por favor, complete correo y contraseña."
@@ -39,13 +44,17 @@ class LoginViewModel(private val prefs: PreferencesManager) : ViewModel() {
             isLoading = true
             statusMessage = null
             try {
-                val response = RetrofitClient.rostroApiService.login(
-                    LoginRequest(correo = usernameState, password = passwordState)
-                )
+                val response = loginUseCase(usernameState, passwordState)
 
                 if (response.isSuccessful && response.body() != null) {
-                    val token = response.body()!!.access_token
-                    prefs.saveCredentials(usernameState, passwordState) // O guardar el token JWT
+                    prefs.saveCredentials(usernameState, passwordState)
+                    // Después de login exitoso:
+                    val loginResponse = response.body()!!
+                    prefs.saveToken(loginResponse.accessToken)
+                    val userId = extractUserIdFromToken(loginResponse.accessToken)
+                    if (userId != null) {
+                        prefs.saveUserId(userId)
+                    }
                     isAuthSuccessful = true
                     statusMessage = "¡Conexión Exitosa, Bienvenido!"
                     onSuccess()
@@ -59,6 +68,7 @@ class LoginViewModel(private val prefs: PreferencesManager) : ViewModel() {
             }
         }
     }
+
     fun authenticateAuto(onSuccess: () -> Unit, onError: (String) -> Unit) {
         val savedUser = prefs.getSavedUsername()
         val savedPass = prefs.getSavedPassword()
@@ -71,13 +81,9 @@ class LoginViewModel(private val prefs: PreferencesManager) : ViewModel() {
         viewModelScope.launch {
             isLoading = true
             try {
-                // Ahora validamos llamando al endpoint /login de FastAPI
-                val response = RetrofitClient.rostroApiService.login(
-                    LoginRequest(correo = savedUser, password = savedPass)
-                )
+                val response = loginUseCase(savedUser, savedPass)
 
                 if (response.isSuccessful && response.body() != null) {
-                    // Si el servidor valida el usuario y contraseña, el login automático es exitoso
                     onSuccess()
                 } else {
                     onError("Las credenciales guardadas ya no son válidas")
@@ -85,8 +91,14 @@ class LoginViewModel(private val prefs: PreferencesManager) : ViewModel() {
             } catch (e: Exception) {
                 onError("Error de red: ${e.localizedMessage}")
             } finally {
-                isLoading = false // Corregido: se detiene el indicador de carga
+                isLoading = false
             }
         }
+    }
+
+    fun shouldCheckAutoLogin(): Boolean {
+        return prefs.isAutoLoginEnabled() &&
+                !prefs.getSavedUsername().isNullOrEmpty() &&
+                !prefs.getSavedPassword().isNullOrEmpty()
     }
 }

@@ -1,5 +1,8 @@
 package com.example.login_app.data.api
 
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.reflect.TypeToken
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -14,20 +17,15 @@ import javax.net.ssl.X509TrustManager
 
 object RetrofitClient {
 
-    private const val BASE_URL = "https://API.corosolution.home/"
+    private const val BASE_URL = "https://api.corosolution.home/"
 
-    // Interceptor para ver las peticiones HTTP en el Logcat
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
-    /**
-     * Genera un OkHttpClient que ignora las validaciones estrictas de certificados SSL.
-     * Esto resuelve el error "Trust anchor for certification path not found".
-     */
+
     private fun getUnsafeOkHttpClient(): OkHttpClient {
         return try {
-            // TrustManager personalizado que no valida la cadena de certificados
             val trustAllCerts = arrayOf<TrustManager>(
                 object : X509TrustManager {
                     override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
@@ -35,11 +33,8 @@ object RetrofitClient {
                     override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
                 }
             )
-
-            // Configurar contexto SSL
             val sslContext = SSLContext.getInstance("SSL")
             sslContext.init(null, trustAllCerts, SecureRandom())
-
             val sslSocketFactory = sslContext.socketFactory
 
             OkHttpClient.Builder()
@@ -47,19 +42,27 @@ object RetrofitClient {
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(15, TimeUnit.SECONDS)
                 .sslSocketFactory(sslSocketFactory, trustAllCerts[0] as X509TrustManager)
-                .hostnameVerifier(HostnameVerifier { _, _ -> true }) // Acepta cualquier hostname
+                .hostnameVerifier(HostnameVerifier { _, _ -> true })
                 .build()
         } catch (e: Exception) {
             throw RuntimeException("Error al configurar OkHttpClient inseguro", e)
         }
     }
 
-    val rostroApiService: RostroApiService by lazy {
+    // 🔥 UN SOLO RETROFIT PARA AMBOS SERVICIOS
+    private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
-            .client(getUnsafeOkHttpClient()) // Usa el cliente que permite el certificado local
-            .addConverterFactory(GsonConverterFactory.create())
+            .client(getUnsafeOkHttpClient())
+            .addConverterFactory(GsonConverterFactory.create()) // ← Gson con deserializador
             .build()
-            .create(RostroApiService::class.java)
+    }
+
+    val fastApiService: FastApiService by lazy {
+        retrofit.create(FastApiService::class.java)
+    }
+
+    val postgrestApiService: PostgrestApiService by lazy {
+        retrofit.create(PostgrestApiService::class.java)
     }
 }

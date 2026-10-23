@@ -4,20 +4,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.fragment.app.FragmentActivity
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.example.login_app.data.local.PreferencesManager
+import com.example.login_app.presentation.ui.FacialRecognitionScreen
+import com.example.login_app.presentation.ui.HistorialScreen
 import com.example.login_app.presentation.ui.HomeScreen
 import com.example.login_app.presentation.ui.LoginScreen
-import com.example.login_app.presentation.ui.RegisterScreen // <--- Importamos la pantalla de registro
+import com.example.login_app.presentation.ui.RegisterScreen
+import com.example.login_app.presentation.ui.VerifyFaceScreen
 import com.example.login_app.presentation.viewmodel.LoginViewModel
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
-    object Register : Screen("register") // <--- Añadida la ruta de registro
+    object Register : Screen("register")
     object Home : Screen("home")
-    object FaceRegister : Screen("face_register")
-    object LogsAccess : Screen("logs_access")
+    object FaceRegister : Screen("face_register") // Ruta base; se usan query params
+    object Historial : Screen("historial_acceso")
+    object VerifyFace : Screen("verify_face")
 }
 
 @Composable
@@ -31,7 +37,7 @@ fun AppNavigation(
         navController = navController,
         startDestination = Screen.Login.route
     ) {
-        // Pantalla de Login
+        // --- LOGIN ---
         composable(Screen.Login.route) {
             LoginScreen(
                 viewModel = viewModel,
@@ -46,14 +52,20 @@ fun AppNavigation(
             )
         }
 
-        // Pantalla de Registro de Usuario (Conectada a FastAPI /register)
+        // --- REGISTRO (solo valida y navega con datos) ---
         composable(Screen.Register.route) {
             RegisterScreen(
                 onRegisterSuccess = {
-                    // Al registrarse con éxito, volvemos al login para que ingrese sus credenciales
+                    // No se usa en el nuevo flujo, pero lo dejamos por compatibilidad
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.Register.route) { inclusive = true }
                     }
+                },
+                onNavigateToFaceRegister = { nombre, apellido, correo, password ->
+                    // Navegamos con los datos del usuario como query params
+                    navController.navigate(
+                        "face_register?nombre=$nombre&apellido=$apellido&correo=$correo&password=$password"
+                    )
                 },
                 onBackToLogin = {
                     navController.popBackStack()
@@ -61,7 +73,7 @@ fun AppNavigation(
             )
         }
 
-        // Pantalla Principal (Home)
+        // --- HOME ---
         composable(Screen.Home.route) {
             val currentUsername = remember {
                 prefsManager.getSavedUsername() ?: "Usuario"
@@ -70,11 +82,11 @@ fun AppNavigation(
             HomeScreen(
                 username = currentUsername,
                 prefsManager = prefsManager,
-                onRegisterFaceClick = {
-                    navController.navigate(Screen.FaceRegister.route)
+                onVerifyFaceClick = {                      // ← NUEVO
+                    navController.navigate(Screen.VerifyFace.route)
                 },
                 onViewLogsClick = {
-                    navController.navigate(Screen.LogsAccess.route)
+                    navController.navigate(Screen.Historial.route)
                 },
                 onLogoutClick = {
                     prefsManager.clearCredentials()
@@ -87,14 +99,49 @@ fun AppNavigation(
             )
         }
 
-        // Pantalla de Reconocimiento Facial (Estructural)
-        composable(Screen.FaceRegister.route) {
-            // Próxima implementación
+        // --- REGISTRO FACIAL (con parámetros opcionales) ---
+        composable(
+            route = "face_register?nombre={nombre}&apellido={apellido}&correo={correo}&password={password}&userId={userId}",
+            arguments = listOf(
+                navArgument("nombre") { type = NavType.StringType; defaultValue = "" },
+                navArgument("apellido") { type = NavType.StringType; defaultValue = "" },
+                navArgument("correo") { type = NavType.StringType; defaultValue = "" },
+                navArgument("password") { type = NavType.StringType; defaultValue = "" },
+                navArgument("userId") { type = NavType.StringType; defaultValue = "" }
+            )
+        ) { backStackEntry ->
+            FacialRecognitionScreen(
+                nombre = backStackEntry.arguments?.getString("nombre").orEmpty(),
+                apellido = backStackEntry.arguments?.getString("apellido").orEmpty(),
+                correo = backStackEntry.arguments?.getString("correo").orEmpty(),
+                password = backStackEntry.arguments?.getString("password").orEmpty(),
+                usuarioId = backStackEntry.arguments?.getString("userId").orEmpty(),
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onRegisterComplete = {
+                    // Después de registrar, vamos al login
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Register.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable(Screen.VerifyFace.route) {
+            VerifyFaceScreen(
+                onBackClick = { navController.popBackStack() },
+                onMatchFound = { nombre ->
+                    // Aquí podrías mostrar un diálogo o navegar a otra pantalla
+                },
+                onNoMatch = {
+                    // Mostrar mensaje
+                }
+            )
         }
 
-        // Pantalla de Logs de Acceso (Estructural)
-        composable(Screen.LogsAccess.route) {
-            // Próxima implementación
+        // --- LOGS ---
+        composable(Screen.Historial.route) {
+            HistorialScreen(onBackClick = { navController.popBackStack() })
         }
     }
 }

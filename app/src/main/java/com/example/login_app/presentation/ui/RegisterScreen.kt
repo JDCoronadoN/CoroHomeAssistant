@@ -7,24 +7,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.example.login_app.data.api.RegisterRequest
-import com.example.login_app.data.api.RetrofitClient
-import kotlinx.coroutines.launch
+import com.example.login_app.presentation.viewmodel.RegisterViewModel
 
 @Composable
 fun RegisterScreen(
+    viewModel: RegisterViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
     onRegisterSuccess: () -> Unit,
+    onNavigateToFaceRegister: (nombre: String, apellido: String, correo: String, password: String) -> Unit,
     onBackToLogin: () -> Unit
 ) {
-    var nombre by remember { mutableStateOf("") }
-    var apellido by remember { mutableStateOf("") }
-    var correo by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-
-    val scope = rememberCoroutineScope()
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -36,15 +27,30 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedTextField(value = nombre, onValueChange = { nombre = it }, label = { Text("Nombre") }, modifier = Modifier.fillMaxWidth())
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(value = apellido, onValueChange = { apellido = it }, label = { Text("Apellido") }, modifier = Modifier.fillMaxWidth())
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(value = correo, onValueChange = { correo = it }, label = { Text("Correo electrónico") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(
+            value = viewModel.nombreState,
+            onValueChange = { viewModel.nombreState = it },
+            label = { Text("Nombre") },
+            modifier = Modifier.fillMaxWidth()
+        )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
+            value = viewModel.apellidoState,
+            onValueChange = { viewModel.apellidoState = it },
+            label = { Text("Apellido") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = viewModel.correoState,
+            onValueChange = { viewModel.correoState = it },
+            label = { Text("Correo electrónico") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = viewModel.passwordState,
+            onValueChange = { viewModel.passwordState = it },
             label = { Text("Contraseña") },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth()
@@ -54,35 +60,20 @@ fun RegisterScreen(
 
         Button(
             onClick = {
-                scope.launch {
-                    isLoading = true
-                    errorMessage = null
-                    try {
-                        val response = RetrofitClient.rostroApiService.register(
-                            RegisterRequest(nombre = nombre, apellido = apellido, correo = correo, password = password)
-                        )
-                        if (response.isSuccessful) {
-                            onRegisterSuccess()
-                        } else {
-                            errorMessage = "Error al registrar: ${response.errorBody()?.string()}"
-                        }
-                    } catch (e: Exception) {
-                        errorMessage = "Excepción: ${e.localizedMessage}"
-                    } finally {
-                        isLoading = false
-                    }
+                viewModel.validateAndProceed {
+                    onNavigateToFaceRegister(
+                        viewModel.nombreState,
+                        viewModel.apellidoState,
+                        viewModel.correoState,
+                        viewModel.passwordState
+                    )
                 }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !isLoading
-        ) {
-            if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp))
-            else Text("Registrarse")
-        }
+            }
+        ) { Text("Siguiente: Registro Facial") }
 
-        errorMessage?.let {
+        viewModel.errorMessage?.let { msg ->
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = it, color = MaterialTheme.colorScheme.error)
+            Text(text = msg, color = MaterialTheme.colorScheme.error)
         }
 
         Spacer(modifier = Modifier.height(12.dp))
